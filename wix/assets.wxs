@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <DirectoryRef Id="APPLICATIONFOLDER">
+            <Directory Id="dirFE623D0437E1A6990EAD0D26EF6BEF19" Name="assets" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <ComponentGroup Id="AssetsGroup">
+            <Component Id="cmpA97A4228A06F6698ED18D3208001C5FE" Directory="dir16AF9713E580653586E4DF6F8EBAA52C" Guid="{FABF6B8B-5A6E-4A01-B896-5ADB9758D278}">
+                <File Id="filA7D15AE3C72B330EB2F7EBC37B422A68" KeyPath="yes" Source="$(var.AssetsDir)\icons\terminal.png" />
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirFE623D0437E1A6990EAD0D26EF6BEF19">
+            <Directory Id="dir16AF9713E580653586E4DF6F8EBAA52C" Name="icons" />
+        </DirectoryRef>
+    </Fragment>
+</Wix>

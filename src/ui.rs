@@ -84,7 +84,7 @@ impl AurumApp {
         if normalized.trim() == "aurum" {
             self.output.push_str("\nUse aurum -system or aurum -version\n\n");
             return;
-        } else if normalized == "aurum -version" {
+        } else if normalized == "aurum -version" || normalized == "aurum -v" {
             self.output.push_str(&format!("\nAurum {}\n\n", VERSION));
             return;
         } else if normalized == "cls" || normalized == "clear" {
@@ -105,7 +105,7 @@ impl AurumApp {
             let mut out = String::new();
             let mut new_dir = None;
 
-            if normalized == "aurum -system" {
+            if normalized == "aurum -system" || normalized == "aurum -s" || normalized == "aurum -sys" {
                 out.push_str("\nSystem Information\n");
                 out.push_str("========================\n\n");
 
