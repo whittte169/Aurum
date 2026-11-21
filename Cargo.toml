@@ -11,8 +11,10 @@ edition = "2024"
 [dependencies]
 eframe = "0.37.0"
 gfxinfo = "0.1.2"
-reqwest = { version = "0.13.5", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 sysinfo = "0.40.4"
+tauri = "2.12.7"
 tokio = { version = "1.54.1", features = ["full"] }
 wmi = "0.18.4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+reqwest = { version = "0.13.5", features = ["json", "blocking"] }
