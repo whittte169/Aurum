@@ -5,7 +5,7 @@ use serde::Deserialize;
 use wmi::WMIConnection;
 
 pub fn get_cpu_model() -> String {
-    let sys = sysinfo::System::new_with_specifics(
+    let sys: sysinfo::System = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing().with_cpu(sysinfo::CpuRefreshKind::everything()
     )).expect("Cannot get a System class from OS");
     let cpu_brand: String = sys.cpus().first().map(|cpu| cpu.brand().to_string()).unwrap_or_else(|| "Unknown CPU".to_string());
@@ -13,8 +13,8 @@ pub fn get_cpu_model() -> String {
 }
 
 pub fn get_cpu_usage() -> f32 {
-    let mut sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::nothing().with_cpu(sysinfo::CpuRefreshKind::everything()),
+    let mut sys: sysinfo::System = sysinfo::System::new_with_specifics(
+        sysinfo::RefreshKind::nothing().with_cpu(sysinfo::CpuRefreshKind::everything())
     ).expect("Cannot get a System class from OS");
     thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu_usage();
@@ -22,24 +22,24 @@ pub fn get_cpu_usage() -> f32 {
 }
 
 pub fn get_total_ram() -> String {
-    let sys = sysinfo::System::new_with_specifics(
+    let sys: sysinfo::System = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
             .with_memory(sysinfo::MemoryRefreshKind::everything())
     ).expect("Cannot get a System class from OS");
-    let total_bytes = sys.total_memory();
-    let total_gb = total_bytes as f64 / 1_073_741_824.0;
-    let memory_info = format!("{:.2} GB", total_gb);
+    let total_bytes: u64 = sys.total_memory();
+    let total_gb: f64 = total_bytes as f64 / 1_073_741_824.0;
+    let memory_info: String = format!("{:.2} GB", total_gb);
     memory_info
 }
 
 pub fn get_ram_use() -> String {
-    let sys = sysinfo::System::new_with_specifics(
+    let sys: sysinfo::System = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
             .with_memory(sysinfo::MemoryRefreshKind::everything())
     ).expect("Cannot get a System class from OS");
-    let used_bytes = sys.used_memory();
-    let used_gb = used_bytes as f64 / 1_073_741_824.0;
-    let memory_info = format!("{:.2} GB", used_gb);
+    let used_bytes: u64 = sys.used_memory();
+    let used_gb: f64 = used_bytes as f64 / 1_073_741_824.0;
+    let memory_info: String = format!("{:.2} GB", used_gb);
     memory_info
 }
 
@@ -75,7 +75,7 @@ pub fn get_gpu_model() -> String {
     let Ok(gpu) = gfxinfo::active_gpu() else {
         return "Unknown GPU".to_string();
     };
-    let model = format!("{} {}", gpu.vendor(), gpu.model());
+    let model: String = format!("{} {}", gpu.vendor(), gpu.model());
     model
 }
 
@@ -83,12 +83,12 @@ pub fn get_gpu_usage() -> u32 {
     let Ok(gpu) = gfxinfo::active_gpu() else {
         return 0;
     };
-    let load = gpu.info().load_pct();
+    let load: u32 = gpu.info().load_pct();
     load
 }
 
 pub fn get_disks_info() -> Vec<String> {
-    let disks = sysinfo::Disks::new_with_refreshed_list()
+    let disks: sysinfo::Disks = sysinfo::Disks::new_with_refreshed_list()
         .expect("Cannot get Disks");
     disks
         .iter()
@@ -107,6 +107,6 @@ pub fn get_disks_info() -> Vec<String> {
 }
 
 pub fn get_os_name() -> String {
-    let os_name = sysinfo::System::long_os_version().unwrap_or_else(|_| "Unknown OS".to_string());
+    let os_name: String = sysinfo::System::long_os_version().unwrap_or_else(|_| "Unknown OS".to_string());
     os_name
 }

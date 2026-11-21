@@ -3,7 +3,6 @@ name = "aurum-terminal"
 description = "A Rust powered Windows terminal."
 version = "1.0.0-alpha.1"
 authors = ["whittte169"]
-license = "MIT"
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/whittte169/Aurum"
@@ -12,9 +11,8 @@ edition = "2024"
 [dependencies]
 eframe = "0.37.0"
 gfxinfo = "0.1.2"
-reqwest = "0.13.5"
+reqwest = { version = "0.13.5", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 sysinfo = "0.40.4"
 tokio = { version = "1.54.1", features = ["full"] }
-walkdir = "2.5.0"
 wmi = "0.18.4"
