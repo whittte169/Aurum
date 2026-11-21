@@ -1,9 +1,9 @@
-
 use eframe::egui;
 use std::path::PathBuf;
+use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
-const VERSION: &str = "1.0.0-alpha.1";
+const VERSION: &str = "1.0.0-alpha.2";
 const REPOSITORY: &str = "https://github.com/whittte169/Aurum";
 
 const BACKGROUND: egui::Color32 = egui::Color32::from_rgb(235, 197, 83);
@@ -19,6 +19,7 @@ pub struct AurumApp {
     history: Vec<String>,
     history_index: Option<usize>,
     icon: egui::TextureHandle,
+    cmd_rx: Option<Receiver<(String, Option<PathBuf>)>>,
 }
 
 impl AurumApp {
@@ -50,25 +51,27 @@ impl AurumApp {
             history: Vec::new(),
             history_index: None,
             icon,
+            cmd_rx: None,
         };
 
         app.output.push_str(&format!(
-            "Copyright (c) whittte169 2026\n{}\n\n",
-            REPOSITORY
+            "Copyright (c) 2026 whittte169\n{}\nMIT License\n\n",
+            REPOSITORY,
         ));
 
         app
     }
 
-    fn execute_command(&mut self) {
+    fn start_command(&mut self, ctx: &egui::Context) {
         let command = self.command.trim().to_string();
+        self.command.clear();
 
         if command.is_empty() {
             return;
         }
 
         self.output.push_str(&format!(
-            "{}>{}\n",
+            "{} $ {}\n",
             self.current_dir.display(),
             command
         ));
@@ -79,122 +82,126 @@ impl AurumApp {
         let normalized = command.to_lowercase();
 
         if normalized.trim() == "aurum" {
-            self.output.push_str(&"\nUse aurum -system or aurum-version\n\n");
+            self.output.push_str("\nUse aurum -system or aurum -version\n\n");
+            return;
         } else if normalized == "aurum -version" {
-            self.output.push_str(&format!(
-                "\nAurum {}\n\n",
-                VERSION
-            ));
-        } else if normalized == "aurum -system" {
-            self.output.push_str("\nSystem Information\n");
-            self.output.push_str("========================\n\n");
-
-            self.output.push_str(&format!(
-                "Operating System: {}\n",
-                crate::system::get_os_name()
-            ));
-
-            self.output.push_str(&format!(
-                "CPU: {}\n",
-                crate::system::get_cpu_model()
-            ));
-
-            self.output.push_str(&format!(
-                "CPU Usage: {:.1}%\n",
-                crate::system::get_cpu_usage()
-            ));
-
-            self.output.push_str(&format!(
-                "GPU: {}\n",
-                crate::system::get_gpu_model()
-            ));
-
-            self.output.push_str(&format!(
-                "GPU Usage: {}%\n",
-                crate::system::get_gpu_usage()
-            ));
-
-            self.output.push_str(&format!(
-                "RAM Usage: {} / {}\n",
-                crate::system::get_ram_use(),
-                crate::system::get_total_ram()
-            ));
-
-            self.output.push_str("\nMemory Modules:\n");
-
-            for ram in crate::system::get_ram_model() {
-                self.output.push_str(&format!("  {}\n", ram));
-            }
-
-            self.output.push_str("\nDrives:\n");
-
-            for disk in crate::system::get_disks_info() {
-                self.output.push_str(&format!("  {}\n", disk));
-            }
-
-            self.output.push('\n');
+            self.output.push_str(&format!("\nAurum {}\n\n", VERSION));
+            return;
         } else if normalized == "cls" || normalized == "clear" {
             self.output.clear();
+            return;
         } else if normalized == "exit" {
-            self.output.push_str(
-                "Use the close button to exit Aurum.\n\n",
-            );
-        } else {
-            match crate::network::execute_command(
-                &command,
-                &self.current_dir,
-            ) {
-                Ok(result) => {
-                    if !result.trim().is_empty() {
-                        self.output.push_str(&result);
-
-                        if !result.ends_with('\n') {
-                            self.output.push('\n');
-                        }
-                    }
-
-                    if normalized == "cd"
-                        || normalized.starts_with("cd ")
-                        || normalized == "set-location"
-                        || normalized.starts_with("set-location ")
-                    {
-                        let path = command
-                            .split_once(' ')
-                            .map(|(_, path)| {
-                                path.trim().trim_matches('"')
-                            })
-                            .unwrap_or("");
-
-                        let next = if path.is_empty() {
-                            PathBuf::from(
-                                std::env::var("USERPROFILE")
-                                    .unwrap_or_else(|_| "C:\\".to_string()),
-                            )
-                        } else if PathBuf::from(path).is_absolute() {
-                            PathBuf::from(path)
-                        } else {
-                            self.current_dir.join(path)
-                        };
-
-                        if next.is_dir() {
-                            self.current_dir = next;
-                        }
-                    }
-                }
-                Err(error) => {
-                    self.output.push_str(&format!(
-                        "Error: {}\n",
-                        error
-                    ));
-                }
-            }
-
-            self.output.push('\n');
+            self.output.push_str("Use the close button to exit Aurum.\n\n");
+            return;
         }
 
-        self.command.clear();
-    }
+        let (tx, rx) = mpsc::channel();
+        self.cmd_rx = Some(rx);
 
+        let current_dir = self.current_dir.clone();
+        let ctx = ctx.clone();
+
+        tokio::spawn(async move {
+            let mut out = String::new();
+            let mut new_dir = None;
+
+            if normalized == "aurum -system" {
+                out.push_str("\nSystem Information\n");
+                out.push_str("========================\n\n");
+
+                out.push_str(&format!(
+                    "Operating System: {}\n",
+                    crate::system::get_os_name().await
+                ));
+
+                out.push_str(&format!(
+                    "CPU: {}\n",
+                    crate::system::get_cpu_model().await
+                ));
+
+                out.push_str(&format!(
+                    "CPU Usage: {:.1}%\n",
+                    crate::system::get_cpu_usage().await
+                ));
+
+                out.push_str(&format!(
+                    "GPU: {}\n",
+                    crate::system::get_gpu_model().await
+                ));
+
+                out.push_str(&format!(
+                    "GPU Usage: {}%\n",
+                    crate::system::get_gpu_usage().await
+                ));
+
+                out.push_str(&format!(
+                    "RAM Usage: {} / {}\n",
+                    crate::system::get_ram_use().await,
+                    crate::system::get_total_ram().await
+                ));
+
+                out.push_str("\nMemory Modules:\n");
+
+                for ram in crate::system::get_ram_model().await {
+                    out.push_str(&format!("  {}\n", ram));
+                }
+
+                out.push_str("\nDrives:\n");
+
+                for disk in crate::system::get_disks_info().await {
+                    out.push_str(&format!("  {}\n", disk));
+                }
+
+                out.push('\n');
+            } else {
+                match crate::network::execute_command(&command, &current_dir).await {
+                    Ok(result) => {
+                        if !result.trim().is_empty() {
+                            out.push_str(&result);
+
+                            if !result.ends_with('\n') {
+                                out.push('\n');
+                            }
+                        }
+
+                        if normalized == "cd"
+                            || normalized.starts_with("cd ")
+                            || normalized == "set-location"
+                            || normalized.starts_with("set-location ")
+                        {
+                            let path = command
+                                .split_once(' ')
+                                .map(|(_, path)| path.trim().trim_matches('"'))
+                                .unwrap_or("");
+
+                            let next = if path.is_empty() {
+                                PathBuf::from(
+                                    std::env::var("USERPROFILE")
+                                        .unwrap_or_else(|_| "C:\\".to_string()),
+                                )
+                            } else if PathBuf::from(path).is_absolute() {
+                                PathBuf::from(path)
+                            } else {
+                                current_dir.join(path)
+                            };
+
+                            if next.is_dir() {
+                                new_dir = Some(next);
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        out.push_str(&format!("Error: {}\n", error));
+                    }
+                }
+
+                out.push('\n');
+            }
+
+            let _ = tx.send((out, new_dir));
+            ctx.request_repaint();
+        });
+    }
     fn navigate_history(&mut self, direction: i32) {
         if self.history.is_empty() {
             return;
@@ -223,29 +230,30 @@ impl AurumApp {
         color: egui::Color32,
         hover: egui::Color32,
     ) -> bool {
-        let button = egui::Button::new(
-            egui::RichText::new(symbol)
-                .size(17.0)
-                .color(color),
-        )
-        .fill(TITLE_BACKGROUND)
-        .stroke(egui::Stroke::new(1.0, BORDER_COLOR))
-        .corner_radius(egui::CornerRadius::same(5));
+        let size = egui::vec2(38.0, 28.0);
+        let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
-        let response = ui.add_sized([38.0, 28.0], button);
+        if ui.is_rect_visible(rect) {
+            let bg_color = if response.hovered() {
+                hover
+            } else {
+                TITLE_BACKGROUND
+            };
 
-        if response.hovered() {
-            ui.painter().rect_filled(
-                response.rect,
+            ui.painter().rect(
+                rect,
                 5.0,
-                hover,
-            );
-
-            ui.painter().rect_stroke(
-                response.rect,
-                5.0,
+                bg_color,
                 egui::Stroke::new(1.0, BORDER_COLOR),
                 egui::StrokeKind::Inside,
+            );
+
+            ui.painter().text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                symbol,
+                egui::FontId::proportional(17.0),
+                color,
             );
         }
 
@@ -258,6 +266,7 @@ impl AurumApp {
         ui.allocate_ui_with_layout(
             egui::vec2(width, 38.0),
             egui::Layout::left_to_right(egui::Align::Center),
+
             |ui| {
                 ui.painter().rect_filled(
                     ui.max_rect(),
@@ -281,40 +290,28 @@ impl AurumApp {
                         .color(TEXT_COLOR),
                 );
 
-                let drag_width =
-                    (ui.available_width() - 140.0).max(0.0);
+                let drag_width = (ui.available_width() - 140.0).max(0.0);
 
                 let drag_response = ui.allocate_response(
                     egui::vec2(drag_width, 38.0),
                     egui::Sense::click_and_drag(),
                 );
 
-                if drag_response.drag_started_by(
-                    egui::PointerButton::Primary,
-                ) {
-                    ui.ctx().send_viewport_cmd(
-                        egui::ViewportCommand::StartDrag,
-                    );
+                if drag_response.drag_started_by(egui::PointerButton::Primary) {
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
 
                 let maximized = ui.input(|input| {
                     input.viewport().maximized.unwrap_or(false)
                 });
 
-                if Self::title_button(
-                    ui,
-                    "—",
-                    TEXT_COLOR,
-                    HOVER_COLOR,
-                ) {
-                    ui.ctx().send_viewport_cmd(
-                        egui::ViewportCommand::Minimized(true),
-                    );
+                if Self::title_button(ui, "—", TEXT_COLOR, HOVER_COLOR) {
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                 }
 
                 if Self::title_button(
                     ui,
-                    if maximized { "❐" } else { "□" },
+                    if maximized { "🗗" } else { "🗖" },
                     TEXT_COLOR,
                     HOVER_COLOR,
                 ) {
@@ -325,13 +322,11 @@ impl AurumApp {
 
                 if Self::title_button(
                     ui,
-                    "×",
+                    "✕",
                     egui::Color32::from_rgb(255, 245, 220),
                     egui::Color32::from_rgb(190, 45, 35),
                 ) {
-                    ui.ctx().send_viewport_cmd(
-                        egui::ViewportCommand::Close,
-                    );
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                 }
 
                 ui.add_space(7.0);
@@ -340,6 +335,16 @@ impl AurumApp {
     }
 
     fn terminal(&mut self, ui: &mut egui::Ui) {
+        if let Some(rx) = &self.cmd_rx {
+            if let Ok((res, new_dir)) = rx.try_recv() {
+                self.output.push_str(&res);
+                if let Some(dir) = new_dir {
+                    self.current_dir = dir;
+                }
+                self.cmd_rx = None;
+            }
+        }
+
         let available = ui.available_size();
 
         egui::ScrollArea::vertical()
@@ -362,15 +367,13 @@ impl AurumApp {
             ui.spacing_mut().item_spacing.x = 0.0;
 
             ui.label(
-                egui::RichText::new(
-                    self.current_dir.display().to_string(),
-                )
-                .font(egui::FontId::monospace(15.0))
-                .color(TEXT_COLOR),
+                egui::RichText::new(self.current_dir.display().to_string())
+                    .font(egui::FontId::monospace(15.0))
+                    .color(TEXT_COLOR),
             );
 
             ui.label(
-                egui::RichText::new(">")
+                egui::RichText::new(" $ ")
                     .font(egui::FontId::monospace(15.0))
                     .color(TEXT_COLOR),
             );
@@ -390,25 +393,19 @@ impl AurumApp {
             }
 
             if response.has_focus()
-                && ui.input(|input| {
-                    input.key_pressed(egui::Key::Enter)
-                })
+                && ui.input(|input| input.key_pressed(egui::Key::Enter))
             {
-                self.execute_command();
+                self.start_command(ui.ctx());
             }
 
             if response.has_focus()
-                && ui.input(|input| {
-                    input.key_pressed(egui::Key::ArrowUp)
-                })
+                && ui.input(|input| input.key_pressed(egui::Key::ArrowUp))
             {
                 self.navigate_history(-1);
             }
 
             if response.has_focus()
-                && ui.input(|input| {
-                    input.key_pressed(egui::Key::ArrowDown)
-                })
+                && ui.input(|input| input.key_pressed(egui::Key::ArrowDown))
             {
                 self.navigate_history(1);
             }
@@ -432,6 +429,7 @@ impl eframe::App for AurumApp {
 
         ui.with_layout(
             egui::Layout::top_down(egui::Align::Min),
+
             |ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
 
@@ -442,6 +440,7 @@ impl eframe::App for AurumApp {
                 ui.allocate_ui_with_layout(
                     ui.available_size(),
                     egui::Layout::top_down(egui::Align::Min),
+
                     |ui| {
                         ui.add_space(5.0);
                         self.terminal(ui);

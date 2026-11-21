@@ -1,7 +1,7 @@
 [package]
 name = "aurum-terminal"
 description = "A Rust powered Windows terminal."
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 authors = ["whittte169"]
 license-file = "LICENSE"
 readme = "README.md"

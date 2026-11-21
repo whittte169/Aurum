@@ -1,4 +1,3 @@
-
 use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
@@ -15,7 +14,7 @@ struct GitHubRelease {
     html_url: String,
 }
 
-pub fn execute_command(
+pub async fn execute_command(
     command: &str,
     current_dir: &Path,
 ) -> Result<String, String> {

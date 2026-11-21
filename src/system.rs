@@ -1,11 +1,10 @@
-
 use serde::Deserialize;
 use wmi::WMIConnection;
 
-pub fn get_cpu_model() -> String {
+pub async fn get_cpu_model() -> String {
     let Ok(sys) = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
-            .with_cpu(sysinfo::CpuRefreshKind::everything()),
+            .with_cpu(sysinfo::CpuRefreshKind::everything())
     ) else {
         return "Unknown CPU".to_string();
     };
@@ -17,10 +16,10 @@ pub fn get_cpu_model() -> String {
         .unwrap_or_else(|| "Unknown CPU".to_string())
 }
 
-pub fn get_cpu_usage() -> f32 {
+pub async fn get_cpu_usage() -> f32 {
     let Ok(mut sys) = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
-            .with_cpu(sysinfo::CpuRefreshKind::everything()),
+            .with_cpu(sysinfo::CpuRefreshKind::everything())
     ) else {
         return 0.0;
     };
@@ -31,10 +30,10 @@ pub fn get_cpu_usage() -> f32 {
     sys.global_cpu_usage()
 }
 
-pub fn get_total_ram() -> String {
+pub async fn get_total_ram() -> String {
     let Ok(sys) = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
-            .with_memory(sysinfo::MemoryRefreshKind::everything()),
+            .with_memory(sysinfo::MemoryRefreshKind::everything())
     ) else {
         return "Unknown".to_string();
     };
@@ -45,10 +44,10 @@ pub fn get_total_ram() -> String {
     )
 }
 
-pub fn get_ram_use() -> String {
+pub async fn get_ram_use() -> String {
     let Ok(sys) = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
-            .with_memory(sysinfo::MemoryRefreshKind::everything()),
+            .with_memory(sysinfo::MemoryRefreshKind::everything())
     ) else {
         return "Unknown".to_string();
     };
@@ -68,7 +67,7 @@ struct PhysicalMemory {
     speed: Option<u32>,
 }
 
-pub fn get_ram_model() -> Vec<String> {
+pub async fn get_ram_model() -> Vec<String> {
     let Ok(wmi) = WMIConnection::new() else {
         return vec!["Unable to connect to WMI".to_string()];
     };
@@ -108,7 +107,7 @@ pub fn get_ram_model() -> Vec<String> {
         .collect()
 }
 
-pub fn get_gpu_model() -> String {
+pub async fn get_gpu_model() -> String {
     let Ok(gpu) = gfxinfo::active_gpu() else {
         return "Unknown GPU".to_string();
     };
@@ -116,7 +115,7 @@ pub fn get_gpu_model() -> String {
     format!("{} {}", gpu.vendor(), gpu.model())
 }
 
-pub fn get_gpu_usage() -> u32 {
+pub async fn get_gpu_usage() -> u32 {
     let Ok(gpu) = gfxinfo::active_gpu() else {
         return 0;
     };
@@ -124,7 +123,7 @@ pub fn get_gpu_usage() -> u32 {
     gpu.info().load_pct()
 }
 
-pub fn get_disks_info() -> Vec<String> {
+pub async fn get_disks_info() -> Vec<String> {
     let Ok(disks) = sysinfo::Disks::new_with_refreshed_list() else {
         return vec!["Unable to retrieve disk information".to_string()];
     };
@@ -148,7 +147,6 @@ pub fn get_disks_info() -> Vec<String> {
         .collect()
 }
 
-pub fn get_os_name() -> String {
-    sysinfo::System::long_os_version()
-        .unwrap_or_else(|_| "Unknown OS".to_string())
+pub async fn get_os_name() -> String {
+    sysinfo::System::long_os_version().unwrap_or_else(|_| "Unknown OS".to_string())
 }

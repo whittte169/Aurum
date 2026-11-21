@@ -1,4 +1,3 @@
-
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod network;
@@ -7,8 +6,16 @@ mod ui;
 
 use eframe::egui;
 use std::sync::Arc;
+use tokio;
 
 fn main() -> eframe::Result<()> {
+    let rt = tokio::runtime::Runtime::new().expect("Не удалось создать Tokio Runtime");
+    let _guard = rt.enter();
+
+    tokio::spawn(async {
+        
+    });
+
     let icon = image::load_from_memory(
         include_bytes!("../assets/icons/terminal.png"),
     )
@@ -16,7 +23,6 @@ fn main() -> eframe::Result<()> {
     .to_rgba8();
 
     let (width, height) = icon.dimensions();
-
     let icon_data = egui::IconData {
         rgba: icon.into_raw(),
         width,
@@ -35,7 +41,7 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "Aurum Terminal",
+        "Aurum",
         options,
         Box::new(|cc| Ok(Box::new(ui::AurumApp::new(cc)))),
     )
