@@ -2,12 +2,13 @@ use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
-
 use serde::Deserialize;
 
+#[allow(dead_code)]
 const GITHUB_RELEASE_URL: &str =
     "https://api.github.com/repos/whittte169/Aurum/releases/latest";
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct GitHubRelease {
     tag_name: String,
@@ -71,6 +72,7 @@ pub async fn execute_command(
     Ok(result)
 }
 
+#[allow(dead_code)]
 pub fn check_for_updates(
 ) -> Result<Option<(String, String)>, String> {
     let client = reqwest::blocking::Client::builder()
