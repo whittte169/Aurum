@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio;
 
 fn main() -> eframe::Result<()> {
-    let rt = tokio::runtime::Runtime::new().expect("Не удалось создать Tokio Runtime");
+    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio Runtime");
     let _guard = rt.enter();
 
     tokio::spawn(async {
